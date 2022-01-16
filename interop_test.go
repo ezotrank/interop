@@ -22,7 +22,7 @@ func TestInterop_Start(t *testing.T) {
 		reader *mocks.Mockireader
 		writer *mocks.Mockiwriter
 	}
-	hexec := 0
+	var hexec int // number of handler executions
 	tests := []struct {
 		name     string
 		flow     Flow
@@ -478,9 +478,7 @@ func TestInterop_Start(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			defer func() {
-				hexec = 0
-			}()
+			hexec = 0
 			ctrl := gomock.NewController(t)
 
 			f := fields{
