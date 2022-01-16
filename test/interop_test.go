@@ -21,7 +21,7 @@ func TestInterop(t *testing.T) {
 		topic       string
 		topicr      string
 		topicd      string
-		gc          string
+		cg          string
 		flow        interop.Flow
 		handlerRecv chan kafka.Message
 	}
@@ -44,7 +44,7 @@ func TestInterop(t *testing.T) {
 				f.topic = randstr()
 				f.topicr = randstr()
 				f.topicd = randstr()
-				f.gc = randstr()
+				f.cg = randstr()
 
 				require.NoError(t, KafkaCreateTopic([]string{broker}, f.topic, f.topicr, f.topicd))
 
@@ -128,7 +128,7 @@ func TestInterop(t *testing.T) {
 				f.topic = randstr()
 				f.topicr = randstr()
 				f.topicd = randstr()
-				f.gc = randstr()
+				f.cg = randstr()
 
 				require.NoError(t, KafkaCreateTopic([]string{broker}, f.topic, f.topicr, f.topicd))
 
@@ -176,7 +176,7 @@ func TestInterop(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
-			intr, err := interop.NewInterop([]string{broker}, f.flow, f.gc)
+			intr, err := interop.NewInterop([]string{broker}, f.flow, f.cg)
 			require.NoError(t, err)
 			done := make(chan struct{})
 			go func() {
@@ -238,7 +238,7 @@ func TestInterop(t *testing.T) {
 			}
 			resp, err := client.OffsetFetch(context.Background(), &kafka.OffsetFetchRequest{
 				Addr:    kafka.TCP(broker),
-				GroupID: f.gc,
+				GroupID: f.cg,
 				Topics: map[string][]int{
 					f.topic:  {0},
 					f.topicr: {0},

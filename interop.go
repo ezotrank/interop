@@ -12,17 +12,17 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func NewInterop(brokers []string, flow Flow, gc string) (*Interop, error) {
+func NewInterop(brokers []string, flow Flow, cg string) (*Interop, error) {
 	return &Interop{
 		flow: flow,
-		gc:   gc,
+		cg:   cg,
 		writer: &kafka.Writer{
 			Addr: kafka.TCP(brokers...),
 		},
 		reader: kafka.NewReader(kafka.ReaderConfig{
 			Brokers:     brokers,
 			GroupTopics: flow.listenTopics(),
-			GroupID:     gc,
+			GroupID:     cg,
 		}),
 	}, nil
 }
@@ -40,7 +40,7 @@ type iwriter interface {
 
 type Interop struct {
 	flow   Flow
-	gc     string
+	cg     string
 	reader ireader
 	writer iwriter
 }
