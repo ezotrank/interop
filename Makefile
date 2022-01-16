@@ -19,5 +19,6 @@ ifeq (, $(shell which goimports))
 endif
 	goimports -w -local github.com/ezotrank/ ./.
 
+.PHONY: test
 test:
 	go test -v -count=1 ./...
