@@ -482,9 +482,8 @@ func TestInterop_Start(t *testing.T) {
 				tt.prepare(&f)
 			}
 
-			// TODO(ezo): fix me
-			// f.reader.EXPECT().Close().Return(nil)
-			// f.writer.EXPECT().Close().Return(nil)
+			f.reader.EXPECT().Close().Return(nil)
+			f.writer.EXPECT().Close().Return(nil)
 
 			i := &Interop{
 				flow:   f.flow,

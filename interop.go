@@ -99,16 +99,18 @@ func (i *Interop) Start(ctx context.Context) error {
 		}
 	}()
 
+	defer func() {
+		if err := i.shutdown(); err != nil {
+			log.Printf("WARN: failed to shutdown: %s", err)
+		}
+	}()
+
 	select {
 	case <-ctx.Done():
-		if err := i.shutdown(); err != nil {
-			return fmt.Errorf("failed shutdown: %w", err)
-		}
+		return nil
 	case err := <-errc:
 		return err
 	}
-
-	return nil
 }
 
 const attemptsHeader = "attempts"
