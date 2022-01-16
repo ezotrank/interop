@@ -45,6 +45,36 @@ type Interop struct {
 	writer iwriter
 }
 
+func (i *Interop) run(ctx context.Context, msg kafka.Message) error {
+	rule, ok := i.flow.Rules[msg.Topic]
+	if !ok {
+		return fmt.Errorf("no rule for topic: %s", msg.Topic)
+	}
+
+	err := rule.Handler(ctx, msg)
+	if err == nil {
+		return nil
+	}
+
+	attempts := getAttempts(msg.Headers) + 1
+	msg.Headers = setAttempts(msg.Headers, attempts)
+
+	if attempts >= rule.Attempts {
+		if rule.DLQ == "" {
+			return err
+		}
+
+		msg.Topic = rule.DLQ
+		msg.Headers = setAttempts(msg.Headers, 0)
+	}
+
+	if err := i.writer.WriteMessages(ctx, msg); err != nil {
+		return fmt.Errorf("failed to write message: %w", err)
+	}
+
+	return nil
+}
+
 func (i *Interop) Start(ctx context.Context) error {
 	errc := make(chan error, 1)
 
@@ -58,19 +88,9 @@ func (i *Interop) Start(ctx context.Context) error {
 				return
 			}
 
-			rule, ok := i.flow.Rules[msg.Topic]
-			if !ok {
-				errc <- fmt.Errorf("no rule for topic: %s", msg.Topic)
+			if err = i.run(ctx, msg); err != nil {
+				errc <- err
 				return
-			}
-
-			//// TODO(ezo): not sexy
-			msg.Headers = setAttempts(msg.Headers, getAttempts(msg.Headers)+1)
-			if err := rule.Handler(ctx, msg); err != nil {
-				if err := i.retry(ctx, msg, err); err != nil {
-					errc <- err
-					return
-				}
 			}
 
 			if err := i.reader.CommitMessages(ctx, msg); err != nil {
@@ -94,11 +114,11 @@ func (i *Interop) Start(ctx context.Context) error {
 	}
 }
 
-const attemptsHeader = "attempts"
+const AttemptsHeader = "x-attempts"
 
 func getAttempts(headers []kafka.Header) int {
 	for _, header := range headers {
-		if header.Key == attemptsHeader {
+		if header.Key == AttemptsHeader {
 			if val, err := strconv.Atoi(string(header.Value)); err != nil {
 				log.Printf("failed to parse attempts header: %s", err)
 			} else {
@@ -114,36 +134,16 @@ func setAttempts(headers []kafka.Header, num int) []kafka.Header {
 	// To prevent change origin data
 	nhs := append([]kafka.Header{}, headers...)
 	for i, h := range nhs {
-		if h.Key == attemptsHeader {
+		if h.Key == AttemptsHeader {
 			nhs[i].Value = []byte(strconv.Itoa(num))
 			return nhs
 		}
 	}
 
 	return append(nhs, kafka.Header{
-		Key:   attemptsHeader,
+		Key:   AttemptsHeader,
 		Value: []byte(strconv.Itoa(num)),
 	})
-}
-
-func (i *Interop) retry(ctx context.Context, msg kafka.Message, err error) error {
-	attempts := getAttempts(msg.Headers)
-	rule := i.flow.Rules[msg.Topic]
-
-	if attempts >= rule.Attempts {
-		if rule.DLQ == "" {
-			return err
-		}
-
-		msg.Topic = rule.DLQ
-		msg.Headers = setAttempts(msg.Headers, 0)
-	}
-
-	if err := i.writer.WriteMessages(ctx, msg); err != nil {
-		return fmt.Errorf("failed to write message: %w", err)
-	}
-
-	return nil
 }
 
 func (i *Interop) shutdown() error {

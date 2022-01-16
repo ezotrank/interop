@@ -53,10 +53,8 @@ func TestInterop_Start(t *testing.T) {
 				)
 				f.reader.EXPECT().
 					CommitMessages(gomock.Any(), kafka.Message{
-						Topic: "topic1",
-						Headers: []kafka.Header{
-							{Key: attemptsHeader, Value: []byte("1")},
-						},
+						Topic:   "topic1",
+						Headers: nil,
 					}).
 					Return(nil).
 					Times(1)
@@ -144,10 +142,8 @@ func TestInterop_Start(t *testing.T) {
 					}, nil)
 				f.reader.EXPECT().
 					CommitMessages(gomock.Any(), kafka.Message{
-						Topic: "topic1",
-						Headers: []kafka.Header{
-							{Key: attemptsHeader, Value: []byte("1")},
-						},
+						Topic:   "topic1",
+						Headers: nil,
 					}).
 					Return(fmt.Errorf("error"))
 			},
@@ -177,7 +173,7 @@ func TestInterop_Start(t *testing.T) {
 						Return(kafka.Message{
 							Topic: "topic1",
 							Headers: []kafka.Header{
-								{Key: attemptsHeader, Value: []byte("1")},
+								{Key: AttemptsHeader, Value: []byte("1")},
 							},
 						}, nil),
 					f.reader.EXPECT().
@@ -185,7 +181,7 @@ func TestInterop_Start(t *testing.T) {
 						Return(kafka.Message{
 							Topic: "topic1",
 							Headers: []kafka.Header{
-								{Key: attemptsHeader, Value: []byte("2")},
+								{Key: AttemptsHeader, Value: []byte("2")},
 							},
 						}, nil),
 				)
@@ -194,7 +190,7 @@ func TestInterop_Start(t *testing.T) {
 						WriteMessages(gomock.Any(), kafka.Message{
 							Topic: "topic1",
 							Headers: []kafka.Header{
-								{Key: attemptsHeader, Value: []byte("1")},
+								{Key: AttemptsHeader, Value: []byte("1")},
 							},
 						}).
 						Return(nil),
@@ -202,7 +198,7 @@ func TestInterop_Start(t *testing.T) {
 						WriteMessages(gomock.Any(), kafka.Message{
 							Topic: "topic1",
 							Headers: []kafka.Header{
-								{Key: attemptsHeader, Value: []byte("2")},
+								{Key: AttemptsHeader, Value: []byte("2")},
 							},
 						}).
 						Return(nil),
@@ -210,17 +206,15 @@ func TestInterop_Start(t *testing.T) {
 				gomock.InOrder(
 					f.reader.EXPECT().
 						CommitMessages(gomock.Any(), kafka.Message{
-							Topic: "topic1",
-							Headers: []kafka.Header{
-								{Key: attemptsHeader, Value: []byte("1")},
-							},
+							Topic:   "topic1",
+							Headers: nil,
 						}).
 						Return(nil),
 					f.reader.EXPECT().
 						CommitMessages(gomock.Any(), kafka.Message{
 							Topic: "topic1",
 							Headers: []kafka.Header{
-								{Key: attemptsHeader, Value: []byte("2")},
+								{Key: AttemptsHeader, Value: []byte("1")},
 							},
 						}).
 						Return(nil),
@@ -257,16 +251,14 @@ func TestInterop_Start(t *testing.T) {
 					WriteMessages(gomock.Any(), kafka.Message{
 						Topic: "dlq",
 						Headers: []kafka.Header{
-							{Key: attemptsHeader, Value: []byte("0")},
+							{Key: AttemptsHeader, Value: []byte("0")},
 						},
 					}).
 					Return(nil)
 				f.reader.EXPECT().
 					CommitMessages(gomock.Any(), kafka.Message{
-						Topic: "topic1",
-						Headers: []kafka.Header{
-							{Key: attemptsHeader, Value: []byte("1")},
-						},
+						Topic:   "topic1",
+						Headers: nil,
 					}).
 					Return(nil)
 			},
@@ -278,7 +270,7 @@ func TestInterop_Start(t *testing.T) {
 				Rules: map[string]Rule{
 					"topic1": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
-							if getAttempts(msg.Headers) == 2 {
+							if getAttempts(msg.Headers) == 1 {
 								return nil
 							}
 							return fmt.Errorf("error")
@@ -299,7 +291,7 @@ func TestInterop_Start(t *testing.T) {
 						Return(kafka.Message{
 							Topic: "topic1",
 							Headers: []kafka.Header{
-								{Key: attemptsHeader, Value: []byte("1")},
+								{Key: AttemptsHeader, Value: []byte("1")},
 							},
 						}, nil),
 					f.reader.EXPECT().
@@ -312,24 +304,22 @@ func TestInterop_Start(t *testing.T) {
 					WriteMessages(gomock.Any(), kafka.Message{
 						Topic: "topic1",
 						Headers: []kafka.Header{
-							{Key: attemptsHeader, Value: []byte("1")},
+							{Key: AttemptsHeader, Value: []byte("1")},
 						},
 					}).
 					Return(nil)
 				gomock.InOrder(
 					f.reader.EXPECT().
 						CommitMessages(gomock.Any(), kafka.Message{
-							Topic: "topic1",
-							Headers: []kafka.Header{
-								{Key: attemptsHeader, Value: []byte("1")},
-							},
+							Topic:   "topic1",
+							Headers: nil,
 						}).
 						Return(nil),
 					f.reader.EXPECT().
 						CommitMessages(gomock.Any(), kafka.Message{
 							Topic: "topic1",
 							Headers: []kafka.Header{
-								{Key: attemptsHeader, Value: []byte("2")},
+								{Key: AttemptsHeader, Value: []byte("1")},
 							},
 						}).
 						Return(nil),
@@ -369,7 +359,7 @@ func TestInterop_Start(t *testing.T) {
 						Return(kafka.Message{
 							Topic: "retry",
 							Headers: []kafka.Header{
-								{Key: attemptsHeader, Value: []byte("0")},
+								{Key: AttemptsHeader, Value: []byte("0")},
 							},
 						}, nil),
 					f.reader.EXPECT().
@@ -377,7 +367,7 @@ func TestInterop_Start(t *testing.T) {
 						Return(kafka.Message{
 							Topic: "retry",
 							Headers: []kafka.Header{
-								{Key: attemptsHeader, Value: []byte("1")},
+								{Key: AttemptsHeader, Value: []byte("1")},
 							},
 						}, nil),
 					f.reader.EXPECT().
@@ -385,7 +375,7 @@ func TestInterop_Start(t *testing.T) {
 						Return(kafka.Message{
 							Topic: "retry",
 							Headers: []kafka.Header{
-								{Key: attemptsHeader, Value: []byte("2")},
+								{Key: AttemptsHeader, Value: []byte("2")},
 							},
 						}, nil),
 					f.reader.EXPECT().
@@ -394,13 +384,12 @@ func TestInterop_Start(t *testing.T) {
 							return kafka.Message{}, io.EOF
 						}),
 				)
-				//nolint:dupl
 				gomock.InOrder(
 					f.writer.EXPECT().
 						WriteMessages(gomock.Any(), kafka.Message{
 							Topic: "retry",
 							Headers: []kafka.Header{
-								{Key: attemptsHeader, Value: []byte("0")},
+								{Key: AttemptsHeader, Value: []byte("0")},
 							},
 						}).
 						Return(nil),
@@ -408,7 +397,7 @@ func TestInterop_Start(t *testing.T) {
 						WriteMessages(gomock.Any(), kafka.Message{
 							Topic: "retry",
 							Headers: []kafka.Header{
-								{Key: attemptsHeader, Value: []byte("1")},
+								{Key: AttemptsHeader, Value: []byte("1")},
 							},
 						}).
 						Return(nil),
@@ -416,7 +405,7 @@ func TestInterop_Start(t *testing.T) {
 						WriteMessages(gomock.Any(), kafka.Message{
 							Topic: "retry",
 							Headers: []kafka.Header{
-								{Key: attemptsHeader, Value: []byte("2")},
+								{Key: AttemptsHeader, Value: []byte("2")},
 							},
 						}).
 						Return(nil),
@@ -424,18 +413,23 @@ func TestInterop_Start(t *testing.T) {
 						WriteMessages(gomock.Any(), kafka.Message{
 							Topic: "dlq",
 							Headers: []kafka.Header{
-								{Key: attemptsHeader, Value: []byte("0")},
+								{Key: AttemptsHeader, Value: []byte("0")},
 							},
 						}).
 						Return(nil),
 				)
-				//nolint:dupl
 				gomock.InOrder(
 					f.reader.EXPECT().
 						CommitMessages(gomock.Any(), kafka.Message{
-							Topic: "topic1",
+							Topic:   "topic1",
+							Headers: nil,
+						}).
+						Return(nil),
+					f.reader.EXPECT().
+						CommitMessages(gomock.Any(), kafka.Message{
+							Topic: "retry",
 							Headers: []kafka.Header{
-								{Key: attemptsHeader, Value: []byte("1")},
+								{Key: AttemptsHeader, Value: []byte("0")},
 							},
 						}).
 						Return(nil),
@@ -443,7 +437,7 @@ func TestInterop_Start(t *testing.T) {
 						CommitMessages(gomock.Any(), kafka.Message{
 							Topic: "retry",
 							Headers: []kafka.Header{
-								{Key: attemptsHeader, Value: []byte("1")},
+								{Key: AttemptsHeader, Value: []byte("1")},
 							},
 						}).
 						Return(nil),
@@ -451,15 +445,7 @@ func TestInterop_Start(t *testing.T) {
 						CommitMessages(gomock.Any(), kafka.Message{
 							Topic: "retry",
 							Headers: []kafka.Header{
-								{Key: attemptsHeader, Value: []byte("2")},
-							},
-						}).
-						Return(nil),
-					f.reader.EXPECT().
-						CommitMessages(gomock.Any(), kafka.Message{
-							Topic: "retry",
-							Headers: []kafka.Header{
-								{Key: attemptsHeader, Value: []byte("3")},
+								{Key: AttemptsHeader, Value: []byte("2")},
 							},
 						}).
 						Return(nil),
