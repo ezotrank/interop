@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	kafka_go "github.com/segmentio/kafka-go"
+	kafka "github.com/segmentio/kafka-go"
 )
 
 // Mockireader is a mock of ireader interface.
@@ -50,7 +50,7 @@ func (mr *MockireaderMockRecorder) Close() *gomock.Call {
 }
 
 // CommitMessages mocks base method.
-func (m *Mockireader) CommitMessages(ctx context.Context, messages ...kafka_go.Message) error {
+func (m *Mockireader) CommitMessages(ctx context.Context, messages ...kafka.Message) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx}
 	for _, a := range messages {
@@ -69,10 +69,10 @@ func (mr *MockireaderMockRecorder) CommitMessages(ctx interface{}, messages ...i
 }
 
 // FetchMessage mocks base method.
-func (m *Mockireader) FetchMessage(ctx context.Context) (kafka_go.Message, error) {
+func (m *Mockireader) FetchMessage(ctx context.Context) (kafka.Message, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "FetchMessage", ctx)
-	ret0, _ := ret[0].(kafka_go.Message)
+	ret0, _ := ret[0].(kafka.Message)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -121,7 +121,7 @@ func (mr *MockiwriterMockRecorder) Close() *gomock.Call {
 }
 
 // WriteMessages mocks base method.
-func (m *Mockiwriter) WriteMessages(ctx context.Context, messages ...kafka_go.Message) error {
+func (m *Mockiwriter) WriteMessages(ctx context.Context, messages ...kafka.Message) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx}
 	for _, a := range messages {

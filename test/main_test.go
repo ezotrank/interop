@@ -63,6 +63,7 @@ func setupNetwork(network string) error {
 	if err != nil {
 		return err
 	}
+	//goland:noinspection GoUnhandledErrorResult
 	defer cli.Close()
 
 	resp, err := cli.NetworkList(ctx, types.NetworkListOptions{})
@@ -99,21 +100,20 @@ func ZooKeeperStart(pool *dockertest.Pool) *dockertest.Resource {
 	defer conn.Close()
 
 	retryFn := func() error {
-		switch conn.State() {
-		case zk.StateHasSession, zk.StateConnected:
+		if conn.State() == zk.StateHasSession || conn.State() == zk.StateConnected {
 			return nil
-		default:
-			return errors.New("not yet connected")
 		}
+		return errors.New("not yet connected")
 	}
 
 	if err = pool.Retry(retryFn); err != nil {
-		log.Fatalf("could not connect to zookeeper: %s", err)
+		log.Panicf("could not connect to zookeeper: %s", err)
 	}
 
 	return res
 }
 
+//goland:noinspection GoUnhandledErrorResult
 func KafkaStart(pool *dockertest.Pool) *dockertest.Resource {
 	res, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Name:         "kafka",
@@ -143,6 +143,7 @@ func KafkaStart(pool *dockertest.Pool) *dockertest.Resource {
 			Addr:  kafka.TCP(fmt.Sprintf("localhost:%s", res.GetPort("9094/tcp"))),
 			Topic: "health-check",
 		}
+		//goland:noinspection GoUnhandledErrorResult
 		defer writer.Close()
 		err := writer.WriteMessages(context.Background(), kafka.Message{Value: []byte("ping")})
 		if err != nil {
@@ -169,7 +170,7 @@ func KafkaCreateTopic(brokers []string, topics ...string) error {
 	}
 	conn, err := kafka.Dial("tcp", brokers[0])
 	if err != nil {
-		return fmt.Errorf("failed to connect to kafka broker: %v", err)
+		return fmt.Errorf("failed to connect to kafka broker: %w", err)
 	}
 
 	// Hack to not get a "Not Available: the cluster is in the middle" error in WriteMessages.

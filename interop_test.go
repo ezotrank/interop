@@ -14,6 +14,7 @@ import (
 	"github.com/ezotrank/interop/mocks"
 )
 
+//nolint:funlen
 func TestInterop_Start(t *testing.T) {
 	type fields struct {
 		flow   Flow
@@ -54,7 +55,7 @@ func TestInterop_Start(t *testing.T) {
 					CommitMessages(gomock.Any(), kafka.Message{
 						Topic: "topic1",
 						Headers: []kafka.Header{
-							{attemptsHeader, []byte("1")},
+							{Key: attemptsHeader, Value: []byte("1")},
 						},
 					}).
 					Return(nil).
@@ -145,7 +146,7 @@ func TestInterop_Start(t *testing.T) {
 					CommitMessages(gomock.Any(), kafka.Message{
 						Topic: "topic1",
 						Headers: []kafka.Header{
-							{attemptsHeader, []byte("1")},
+							{Key: attemptsHeader, Value: []byte("1")},
 						},
 					}).
 					Return(fmt.Errorf("error"))
@@ -176,7 +177,7 @@ func TestInterop_Start(t *testing.T) {
 						Return(kafka.Message{
 							Topic: "topic1",
 							Headers: []kafka.Header{
-								{attemptsHeader, []byte("1")},
+								{Key: attemptsHeader, Value: []byte("1")},
 							},
 						}, nil),
 					f.reader.EXPECT().
@@ -184,7 +185,7 @@ func TestInterop_Start(t *testing.T) {
 						Return(kafka.Message{
 							Topic: "topic1",
 							Headers: []kafka.Header{
-								{attemptsHeader, []byte("2")},
+								{Key: attemptsHeader, Value: []byte("2")},
 							},
 						}, nil),
 				)
@@ -193,7 +194,7 @@ func TestInterop_Start(t *testing.T) {
 						WriteMessages(gomock.Any(), kafka.Message{
 							Topic: "topic1",
 							Headers: []kafka.Header{
-								{attemptsHeader, []byte("1")},
+								{Key: attemptsHeader, Value: []byte("1")},
 							},
 						}).
 						Return(nil),
@@ -201,7 +202,7 @@ func TestInterop_Start(t *testing.T) {
 						WriteMessages(gomock.Any(), kafka.Message{
 							Topic: "topic1",
 							Headers: []kafka.Header{
-								{attemptsHeader, []byte("2")},
+								{Key: attemptsHeader, Value: []byte("2")},
 							},
 						}).
 						Return(nil),
@@ -211,7 +212,7 @@ func TestInterop_Start(t *testing.T) {
 						CommitMessages(gomock.Any(), kafka.Message{
 							Topic: "topic1",
 							Headers: []kafka.Header{
-								{attemptsHeader, []byte("1")},
+								{Key: attemptsHeader, Value: []byte("1")},
 							},
 						}).
 						Return(nil),
@@ -219,7 +220,7 @@ func TestInterop_Start(t *testing.T) {
 						CommitMessages(gomock.Any(), kafka.Message{
 							Topic: "topic1",
 							Headers: []kafka.Header{
-								{attemptsHeader, []byte("2")},
+								{Key: attemptsHeader, Value: []byte("2")},
 							},
 						}).
 						Return(nil),
@@ -256,7 +257,7 @@ func TestInterop_Start(t *testing.T) {
 					WriteMessages(gomock.Any(), kafka.Message{
 						Topic: "dlq",
 						Headers: []kafka.Header{
-							{attemptsHeader, []byte("0")},
+							{Key: attemptsHeader, Value: []byte("0")},
 						},
 					}).
 					Return(nil)
@@ -264,7 +265,7 @@ func TestInterop_Start(t *testing.T) {
 					CommitMessages(gomock.Any(), kafka.Message{
 						Topic: "topic1",
 						Headers: []kafka.Header{
-							{attemptsHeader, []byte("1")},
+							{Key: attemptsHeader, Value: []byte("1")},
 						},
 					}).
 					Return(nil)
@@ -298,7 +299,7 @@ func TestInterop_Start(t *testing.T) {
 						Return(kafka.Message{
 							Topic: "topic1",
 							Headers: []kafka.Header{
-								{attemptsHeader, []byte("1")},
+								{Key: attemptsHeader, Value: []byte("1")},
 							},
 						}, nil),
 					f.reader.EXPECT().
@@ -311,7 +312,7 @@ func TestInterop_Start(t *testing.T) {
 					WriteMessages(gomock.Any(), kafka.Message{
 						Topic: "topic1",
 						Headers: []kafka.Header{
-							{attemptsHeader, []byte("1")},
+							{Key: attemptsHeader, Value: []byte("1")},
 						},
 					}).
 					Return(nil)
@@ -320,7 +321,7 @@ func TestInterop_Start(t *testing.T) {
 						CommitMessages(gomock.Any(), kafka.Message{
 							Topic: "topic1",
 							Headers: []kafka.Header{
-								{attemptsHeader, []byte("1")},
+								{Key: attemptsHeader, Value: []byte("1")},
 							},
 						}).
 						Return(nil),
@@ -328,7 +329,7 @@ func TestInterop_Start(t *testing.T) {
 						CommitMessages(gomock.Any(), kafka.Message{
 							Topic: "topic1",
 							Headers: []kafka.Header{
-								{attemptsHeader, []byte("2")},
+								{Key: attemptsHeader, Value: []byte("2")},
 							},
 						}).
 						Return(nil),
@@ -368,7 +369,7 @@ func TestInterop_Start(t *testing.T) {
 						Return(kafka.Message{
 							Topic: "retry",
 							Headers: []kafka.Header{
-								{attemptsHeader, []byte("0")},
+								{Key: attemptsHeader, Value: []byte("0")},
 							},
 						}, nil),
 					f.reader.EXPECT().
@@ -376,7 +377,7 @@ func TestInterop_Start(t *testing.T) {
 						Return(kafka.Message{
 							Topic: "retry",
 							Headers: []kafka.Header{
-								{attemptsHeader, []byte("1")},
+								{Key: attemptsHeader, Value: []byte("1")},
 							},
 						}, nil),
 					f.reader.EXPECT().
@@ -384,7 +385,7 @@ func TestInterop_Start(t *testing.T) {
 						Return(kafka.Message{
 							Topic: "retry",
 							Headers: []kafka.Header{
-								{attemptsHeader, []byte("2")},
+								{Key: attemptsHeader, Value: []byte("2")},
 							},
 						}, nil),
 					f.reader.EXPECT().
@@ -393,12 +394,13 @@ func TestInterop_Start(t *testing.T) {
 							return kafka.Message{}, io.EOF
 						}),
 				)
+				//nolint:dupl
 				gomock.InOrder(
 					f.writer.EXPECT().
 						WriteMessages(gomock.Any(), kafka.Message{
 							Topic: "retry",
 							Headers: []kafka.Header{
-								{attemptsHeader, []byte("0")},
+								{Key: attemptsHeader, Value: []byte("0")},
 							},
 						}).
 						Return(nil),
@@ -406,7 +408,7 @@ func TestInterop_Start(t *testing.T) {
 						WriteMessages(gomock.Any(), kafka.Message{
 							Topic: "retry",
 							Headers: []kafka.Header{
-								{attemptsHeader, []byte("1")},
+								{Key: attemptsHeader, Value: []byte("1")},
 							},
 						}).
 						Return(nil),
@@ -414,7 +416,7 @@ func TestInterop_Start(t *testing.T) {
 						WriteMessages(gomock.Any(), kafka.Message{
 							Topic: "retry",
 							Headers: []kafka.Header{
-								{attemptsHeader, []byte("2")},
+								{Key: attemptsHeader, Value: []byte("2")},
 							},
 						}).
 						Return(nil),
@@ -422,17 +424,18 @@ func TestInterop_Start(t *testing.T) {
 						WriteMessages(gomock.Any(), kafka.Message{
 							Topic: "dlq",
 							Headers: []kafka.Header{
-								{attemptsHeader, []byte("0")},
+								{Key: attemptsHeader, Value: []byte("0")},
 							},
 						}).
 						Return(nil),
 				)
+				//nolint:dupl
 				gomock.InOrder(
 					f.reader.EXPECT().
 						CommitMessages(gomock.Any(), kafka.Message{
 							Topic: "topic1",
 							Headers: []kafka.Header{
-								{attemptsHeader, []byte("1")},
+								{Key: attemptsHeader, Value: []byte("1")},
 							},
 						}).
 						Return(nil),
@@ -440,7 +443,7 @@ func TestInterop_Start(t *testing.T) {
 						CommitMessages(gomock.Any(), kafka.Message{
 							Topic: "retry",
 							Headers: []kafka.Header{
-								{attemptsHeader, []byte("1")},
+								{Key: attemptsHeader, Value: []byte("1")},
 							},
 						}).
 						Return(nil),
@@ -448,7 +451,7 @@ func TestInterop_Start(t *testing.T) {
 						CommitMessages(gomock.Any(), kafka.Message{
 							Topic: "retry",
 							Headers: []kafka.Header{
-								{attemptsHeader, []byte("2")},
+								{Key: attemptsHeader, Value: []byte("2")},
 							},
 						}).
 						Return(nil),
@@ -456,7 +459,7 @@ func TestInterop_Start(t *testing.T) {
 						CommitMessages(gomock.Any(), kafka.Message{
 							Topic: "retry",
 							Headers: []kafka.Header{
-								{attemptsHeader, []byte("3")},
+								{Key: attemptsHeader, Value: []byte("3")},
 							},
 						}).
 						Return(nil),
@@ -479,9 +482,9 @@ func TestInterop_Start(t *testing.T) {
 				tt.prepare(&f)
 			}
 
-			//TODO(ezo): fix me
-			//f.reader.EXPECT().Close().Return(nil)
-			//f.writer.EXPECT().Close().Return(nil)
+			// TODO(ezo): fix me
+			// f.reader.EXPECT().Close().Return(nil)
+			// f.writer.EXPECT().Close().Return(nil)
 
 			i := &Interop{
 				flow:   f.flow,

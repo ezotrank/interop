@@ -2,6 +2,7 @@ package interop
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -69,7 +70,7 @@ func (i *Interop) Start(ctx context.Context) error {
 	go func() {
 		for {
 			msg, err := i.reader.FetchMessage(ctx)
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				errc <- nil
 			} else if err != nil {
 				errc <- fmt.Errorf("failed fetch message: %w", err)
