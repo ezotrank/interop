@@ -7,9 +7,13 @@ import (
 )
 
 type Rule struct {
-	Handler  func(ctx context.Context, msg kafka.Message) error
-	DLQ      string // if dlq is empty, returns error on failure.
-	Attempts int    // retry attempts before sending to DLQ.
+	Handler func(ctx context.Context, msg kafka.Message) error
+	// DLQ is the name of the DLQ topic to which messages should be sent.
+	// If dlq is empty, returns error on failure.
+	DLQ string
+	// Attempts is a number of attempts to process message.
+	// If Attempts less than 1, retry is endless.
+	Attempts int
 }
 
 type Flow struct {

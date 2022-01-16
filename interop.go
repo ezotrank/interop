@@ -59,11 +59,11 @@ func (i *Interop) run(ctx context.Context, msg kafka.Message) error {
 	attempts := getAttempts(msg.Headers) + 1
 	msg.Headers = setAttempts(msg.Headers, attempts)
 
-	if attempts >= rule.Attempts {
-		if rule.DLQ == "" {
-			return err
-		}
-
+	switch {
+	case rule.Attempts < 1:
+	case attempts >= rule.Attempts && rule.DLQ == "":
+		return err
+	case attempts >= rule.Attempts && rule.DLQ != "":
 		msg.Topic = rule.DLQ
 		msg.Headers = setAttempts(msg.Headers, 0)
 	}

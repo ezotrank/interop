@@ -39,6 +39,7 @@ func TestInterop_Start(t *testing.T) {
 							hexec++
 							return nil
 						},
+						Attempts: 1,
 					},
 				},
 			},
@@ -246,7 +247,8 @@ func TestInterop_Start(t *testing.T) {
 							hexec++
 							return fmt.Errorf("error")
 						},
-						DLQ: "dlq",
+						Attempts: 1,
+						DLQ:      "dlq",
 					},
 				},
 			},
@@ -473,6 +475,88 @@ func TestInterop_Start(t *testing.T) {
 				)
 			},
 			wantexec: 4,
+			wantErr:  false,
+		},
+		{
+			name: "attempts is 0 infinity times of retry",
+			flow: Flow{
+				Rules: map[string]Rule{
+					"topic1": {
+						Handler: func(ctx context.Context, msg kafka.Message) error {
+							hexec++
+							return fmt.Errorf("error")
+						},
+						Attempts: 0,
+					},
+				},
+			},
+			prepare: func(f *fields) {
+				gomock.InOrder(
+					f.reader.EXPECT().
+						FetchMessage(gomock.Any()).
+						Return(kafka.Message{
+							Topic: "topic1",
+						}, nil),
+					f.reader.EXPECT().
+						FetchMessage(gomock.Any()).
+						Return(kafka.Message{
+							Topic:   "topic1",
+							Headers: []kafka.Header{{Key: AttemptsHeader, Value: []byte("1")}},
+						}, nil),
+					f.reader.EXPECT().
+						FetchMessage(gomock.Any()).
+						Return(kafka.Message{
+							Topic:   "topic1",
+							Headers: []kafka.Header{{Key: AttemptsHeader, Value: []byte("2")}},
+						}, nil),
+					f.reader.EXPECT().
+						FetchMessage(gomock.Any()).
+						DoAndReturn(func(_ context.Context) (kafka.Message, error) {
+							return kafka.Message{}, io.EOF
+						}),
+				)
+				gomock.InOrder(
+					f.writer.EXPECT().
+						WriteMessages(gomock.Any(), kafka.Message{
+							Topic:   "topic1",
+							Headers: []kafka.Header{{Key: AttemptsHeader, Value: []byte("1")}},
+						}).
+						Return(nil),
+					f.writer.EXPECT().
+						WriteMessages(gomock.Any(), kafka.Message{
+							Topic:   "topic1",
+							Headers: []kafka.Header{{Key: AttemptsHeader, Value: []byte("2")}},
+						}).
+						Return(nil),
+					f.writer.EXPECT().
+						WriteMessages(gomock.Any(), kafka.Message{
+							Topic:   "topic1",
+							Headers: []kafka.Header{{Key: AttemptsHeader, Value: []byte("3")}},
+						}).
+						Return(nil),
+				)
+				gomock.InOrder(
+					f.reader.EXPECT().
+						CommitMessages(gomock.Any(), kafka.Message{
+							Topic:   "topic1",
+							Headers: nil,
+						}).
+						Return(nil),
+					f.reader.EXPECT().
+						CommitMessages(gomock.Any(), kafka.Message{
+							Topic:   "topic1",
+							Headers: []kafka.Header{{Key: AttemptsHeader, Value: []byte("1")}},
+						}).
+						Return(nil),
+					f.reader.EXPECT().
+						CommitMessages(gomock.Any(), kafka.Message{
+							Topic:   "topic1",
+							Headers: []kafka.Header{{Key: AttemptsHeader, Value: []byte("2")}},
+						}).
+						Return(nil),
+				)
+			},
+			wantexec: 3,
 			wantErr:  false,
 		},
 	}
