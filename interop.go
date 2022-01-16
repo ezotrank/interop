@@ -12,25 +12,6 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type Rule struct {
-	Handler  func(ctx context.Context, msg kafka.Message) error
-	DLQ      string // if dlq is empty, returns error on failure.
-	Attempts int    // retry attempts before sending to DLQ.
-}
-
-type Flow struct {
-	Rules map[string]Rule
-}
-
-func listenTopics(flow Flow) []string {
-	topics := make([]string, 0, len(flow.Rules))
-	for topic := range flow.Rules {
-		topics = append(topics, topic)
-	}
-
-	return topics
-}
-
 func NewInterop(brokers []string, flow Flow, gc string) (*Interop, error) {
 	return &Interop{
 		flow: flow,
@@ -40,7 +21,7 @@ func NewInterop(brokers []string, flow Flow, gc string) (*Interop, error) {
 		},
 		reader: kafka.NewReader(kafka.ReaderConfig{
 			Brokers:     brokers,
-			GroupTopics: listenTopics(flow),
+			GroupTopics: flow.listenTopics(),
 			GroupID:     gc,
 		}),
 	}, nil
