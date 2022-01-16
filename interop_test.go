@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/segmentio/kafka-go"
+	"github.com/stretchr/testify/require"
 
 	"github.com/ezotrank/interop/mocks"
 )
@@ -21,11 +22,13 @@ func TestInterop_Start(t *testing.T) {
 		reader *mocks.Mockireader
 		writer *mocks.Mockiwriter
 	}
+	hexec := 0
 	tests := []struct {
-		name    string
-		flow    Flow
-		prepare func(f *fields)
-		wantErr bool
+		name     string
+		flow     Flow
+		prepare  func(f *fields)
+		wantexec int
+		wantErr  bool
 	}{
 		{
 			name: "success flow",
@@ -33,6 +36,7 @@ func TestInterop_Start(t *testing.T) {
 				Rules: map[string]Rule{
 					"topic1": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
+							hexec++
 							return nil
 						},
 					},
@@ -59,7 +63,8 @@ func TestInterop_Start(t *testing.T) {
 					Return(nil).
 					Times(1)
 			},
-			wantErr: false,
+			wantexec: 1,
+			wantErr:  false,
 		},
 		{
 			name: "fetch message error",
@@ -67,6 +72,7 @@ func TestInterop_Start(t *testing.T) {
 				Rules: map[string]Rule{
 					"topic1": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
+							hexec++
 							return nil
 						},
 					},
@@ -79,7 +85,8 @@ func TestInterop_Start(t *testing.T) {
 						Topic: "topic1",
 					}, fmt.Errorf("error"))
 			},
-			wantErr: true,
+			wantexec: 0,
+			wantErr:  true,
 		},
 		{
 			name: "message with unknown topic",
@@ -87,6 +94,7 @@ func TestInterop_Start(t *testing.T) {
 				Rules: map[string]Rule{
 					"topic1": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
+							hexec++
 							return nil
 						},
 					},
@@ -99,7 +107,8 @@ func TestInterop_Start(t *testing.T) {
 						Topic: "topic2",
 					}, nil)
 			},
-			wantErr: true,
+			wantexec: 0,
+			wantErr:  true,
 		},
 		{
 			name: "handle return error without retry policy",
@@ -107,6 +116,7 @@ func TestInterop_Start(t *testing.T) {
 				Rules: map[string]Rule{
 					"topic1": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
+							hexec++
 							return fmt.Errorf("error")
 						},
 						Attempts: 1,
@@ -120,7 +130,8 @@ func TestInterop_Start(t *testing.T) {
 						Topic: "topic1",
 					}, nil)
 			},
-			wantErr: true,
+			wantexec: 1,
+			wantErr:  true,
 		},
 		{
 			name: "commit message return error",
@@ -128,6 +139,7 @@ func TestInterop_Start(t *testing.T) {
 				Rules: map[string]Rule{
 					"topic1": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
+							hexec++
 							return nil
 						},
 						Attempts: 1,
@@ -147,7 +159,8 @@ func TestInterop_Start(t *testing.T) {
 					}).
 					Return(fmt.Errorf("error"))
 			},
-			wantErr: true,
+			wantexec: 1,
+			wantErr:  true,
 		},
 		{
 			name: "handle return error with retry policy",
@@ -155,6 +168,7 @@ func TestInterop_Start(t *testing.T) {
 				Rules: map[string]Rule{
 					"topic1": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
+							hexec++
 							return fmt.Errorf("error")
 						},
 						Attempts: 3,
@@ -220,7 +234,8 @@ func TestInterop_Start(t *testing.T) {
 						Return(nil),
 				)
 			},
-			wantErr: true,
+			wantexec: 3,
+			wantErr:  true,
 		},
 		{
 			name: "handle return error with retry policy and DLQ",
@@ -228,6 +243,7 @@ func TestInterop_Start(t *testing.T) {
 				Rules: map[string]Rule{
 					"topic1": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
+							hexec++
 							return fmt.Errorf("error")
 						},
 						DLQ: "dlq",
@@ -262,7 +278,8 @@ func TestInterop_Start(t *testing.T) {
 					}).
 					Return(nil)
 			},
-			wantErr: false,
+			wantexec: 1,
+			wantErr:  false,
 		},
 		{
 			name: "handle return error only first retry policy is set",
@@ -270,6 +287,7 @@ func TestInterop_Start(t *testing.T) {
 				Rules: map[string]Rule{
 					"topic1": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
+							hexec++
 							if getAttempts(msg.Headers) == 1 {
 								return nil
 							}
@@ -325,7 +343,8 @@ func TestInterop_Start(t *testing.T) {
 						Return(nil),
 				)
 			},
-			wantErr: false,
+			wantexec: 2,
+			wantErr:  false,
 		},
 		{
 			name: "handle return error dlq is set with retries",
@@ -333,6 +352,7 @@ func TestInterop_Start(t *testing.T) {
 				Rules: map[string]Rule{
 					"topic1": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
+							hexec++
 							return fmt.Errorf("error")
 						},
 						Attempts: 1,
@@ -340,6 +360,7 @@ func TestInterop_Start(t *testing.T) {
 					},
 					"retry": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
+							hexec++
 							return fmt.Errorf("error")
 						},
 						Attempts: 3,
@@ -451,11 +472,15 @@ func TestInterop_Start(t *testing.T) {
 						Return(nil),
 				)
 			},
-			wantErr: false,
+			wantexec: 4,
+			wantErr:  false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				hexec = 0
+			}()
 			ctrl := gomock.NewController(t)
 
 			f := fields{
@@ -480,6 +505,7 @@ func TestInterop_Start(t *testing.T) {
 			if err := i.Start(context.Background()); (err != nil) != tt.wantErr {
 				t.Errorf("Start() error = %v, wantErr %v", err, tt.wantErr)
 			}
+			require.Equal(t, tt.wantexec, hexec)
 		})
 	}
 }
