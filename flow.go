@@ -12,7 +12,6 @@ type Rule struct {
 	// If dlq is empty, returns error on failure.
 	DLQ string
 	// Attempts is a number of attempts to process message.
-	// If Attempts less than 1, retry is endless.
 	Attempts int
 }
 

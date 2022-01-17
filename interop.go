@@ -51,6 +51,11 @@ func (i *Interop) run(ctx context.Context, msg kafka.Message) error {
 		return fmt.Errorf("no rule for topic: %s", msg.Topic)
 	}
 
+	// TODO(ezo): validate this in the rule builder.
+	if rule.Attempts < 1 {
+		return fmt.Errorf("number of attempts must be greater than 0")
+	}
+
 	err := rule.Handler(ctx, msg)
 	if err == nil {
 		return nil
@@ -60,7 +65,6 @@ func (i *Interop) run(ctx context.Context, msg kafka.Message) error {
 	msg.Headers = setAttempts(msg.Headers, attempts)
 
 	switch {
-	case rule.Attempts < 1:
 	case attempts >= rule.Attempts && rule.DLQ == "":
 		return err
 	case attempts >= rule.Attempts && rule.DLQ != "":
