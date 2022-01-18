@@ -73,10 +73,12 @@ EXEC:
 		return err
 	case attempts >= rule.Attempts && rule.DLQ != "":
 		msg.Topic = rule.DLQ
-		attempts = 0 // Attempt depends on the topic where it set.
+		// Remove attempts header before sending to DLQ.
+		msg.Headers = removeAttempts(msg.Headers)
+	default:
+		msg.Headers = setAttempts(msg.Headers, attempts)
 	}
 
-	msg.Headers = setAttempts(msg.Headers, attempts)
 	if err := i.writer.WriteMessages(ctx, msg); err != nil {
 		return fmt.Errorf("failed to write message: %w", err)
 	}
@@ -137,6 +139,21 @@ func getAttempts(headers []kafka.Header) int {
 	}
 
 	return 0
+}
+
+func removeAttempts(headers []kafka.Header) []kafka.Header {
+	if len(headers) < 1 {
+		return headers
+	}
+
+	nhs := make([]kafka.Header, 0)
+	for _, h := range headers {
+		if h.Key != AttemptsHeader {
+			nhs = append(nhs, h)
+		}
+	}
+
+	return nhs
 }
 
 func setAttempts(headers []kafka.Header, num int) []kafka.Header {
