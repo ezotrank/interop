@@ -164,6 +164,58 @@ func TestInterop(t *testing.T) {
 			topicdoff: -1,
 			wantErr:   true,
 		},
+		{
+			name: "ordered flow",
+			prepare: func(f *fields) {
+				f.topic = randstr()
+				f.topicr = randstr()
+				f.topicd = randstr()
+				f.cg = randstr()
+
+				require.NoError(t, KafkaCreateTopic([]string{broker}, f.topic, f.topicr, f.topicd))
+
+				f.handlerRecv = make(chan kafka.Message)
+				f.flow = interop.Flow{
+					Rules: map[string]interop.Rule{
+						f.topic: {
+							Handler: func(ctx context.Context, msg kafka.Message) error {
+								f.handlerRecv <- msg
+								return fmt.Errorf("error")
+							},
+							Attempts: 2,
+							Ordered:  true,
+							DLQ:      f.topicd,
+						},
+					},
+				}
+			},
+			msgs: []kafka.Message{
+				{
+					Key:   []byte("key"),
+					Value: []byte("value"),
+				},
+			},
+			handlermsg: []kafka.Message{
+				{
+					Key:   []byte("key"),
+					Value: []byte("value"),
+				},
+				{
+					Key:   []byte("key"),
+					Value: []byte("value"),
+				},
+			},
+			topicdmsg: []kafka.Message{
+				{
+					Key:   []byte("key"),
+					Value: []byte("value"),
+				},
+			},
+			topicoff:  1,
+			topicroff: -1,
+			topicdoff: -1,
+			wantErr:   false,
+		},
 	}
 
 	for _, tt := range tests {

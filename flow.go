@@ -13,6 +13,9 @@ type Rule struct {
 	DLQ string
 	// Attempts is a number of attempts to process message.
 	Attempts int
+	// Ordered is a flag indicating whether messages should be retried in
+	// the same function without resend to same topic.
+	Ordered bool
 }
 
 type Flow struct {

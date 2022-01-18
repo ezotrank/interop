@@ -314,7 +314,7 @@ func TestInterop_Start(t *testing.T) {
 					"topic1": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
 							hexec++
-							if getAttempts(msg.Headers) == 1 {
+							if hexec == 2 {
 								return nil
 							}
 							return fmt.Errorf("error")
@@ -499,6 +499,122 @@ func TestInterop_Start(t *testing.T) {
 				)
 			},
 			wantexec: 4,
+			wantErr:  false,
+		},
+		{
+			name: "ordered flow with retry and failed handler",
+			flow: Flow{
+				Rules: map[string]Rule{
+					"topic1": {
+						Handler: func(ctx context.Context, msg kafka.Message) error {
+							hexec++
+							return fmt.Errorf("error")
+						},
+						Attempts: 3,
+						Ordered:  true,
+					},
+				},
+			},
+			prepare: func(f *fields) {
+				gomock.InOrder(
+					f.reader.EXPECT().
+						FetchMessage(gomock.Any()).
+						Return(kafka.Message{
+							Topic: "topic1",
+						}, nil),
+				)
+			},
+			wantexec: 3,
+			wantErr:  true,
+		},
+		{
+			name: "ordered flow with a retry and handler with success in second time",
+			flow: Flow{
+				Rules: map[string]Rule{
+					"topic1": {
+						Handler: func(ctx context.Context, msg kafka.Message) error {
+							hexec++
+							if hexec == 2 {
+								return nil
+							}
+							return fmt.Errorf("error")
+						},
+						Attempts: 2,
+						Ordered:  true,
+					},
+				},
+			},
+			prepare: func(f *fields) {
+				gomock.InOrder(
+					f.reader.EXPECT().
+						FetchMessage(gomock.Any()).
+						Return(kafka.Message{
+							Topic: "topic1",
+						}, nil),
+					f.reader.EXPECT().
+						FetchMessage(gomock.Any()).
+						DoAndReturn(func(_ context.Context) (kafka.Message, error) {
+							return kafka.Message{}, io.EOF
+						}),
+				)
+				gomock.InOrder(
+					f.reader.EXPECT().
+						CommitMessages(gomock.Any(), kafka.Message{
+							Topic:   "topic1",
+							Headers: nil,
+						}).
+						Return(nil),
+				)
+			},
+			wantexec: 2,
+			wantErr:  false,
+		},
+		{
+			name: "ordered flow with retry and sending to DQL",
+			flow: Flow{
+				Rules: map[string]Rule{
+					"topic1": {
+						Handler: func(ctx context.Context, msg kafka.Message) error {
+							hexec++
+							return fmt.Errorf("error")
+						},
+						DLQ:      "dlq",
+						Attempts: 2,
+						Ordered:  true,
+					},
+				},
+			},
+			prepare: func(f *fields) {
+				gomock.InOrder(
+					f.reader.EXPECT().
+						FetchMessage(gomock.Any()).
+						Return(kafka.Message{
+							Topic: "topic1",
+						}, nil),
+					f.reader.EXPECT().
+						FetchMessage(gomock.Any()).
+						DoAndReturn(func(_ context.Context) (kafka.Message, error) {
+							return kafka.Message{}, io.EOF
+						}),
+				)
+				f.writer.EXPECT().
+					WriteMessages(gomock.Any(), kafka.Message{
+						Topic: "dlq",
+						Headers: []kafka.Header{
+							{Key: AttemptsHeader, Value: []byte("0")},
+						},
+					}).
+					Return(nil)
+				gomock.InOrder(
+					f.reader.EXPECT().
+						CommitMessages(gomock.Any(), kafka.Message{
+							Topic:   "topic1",
+							Headers: nil,
+						}).
+						Return(nil),
+				)
+			},
+			wantexec: 2,
 			wantErr:  false,
 		},
 	}

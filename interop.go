@@ -56,22 +56,27 @@ func (i *Interop) run(ctx context.Context, msg kafka.Message) error {
 		return fmt.Errorf("number of attempts must be greater than 0")
 	}
 
+	attempts := getAttempts(msg.Headers)
+
+EXEC:
+	// Never change the message.
 	err := rule.Handler(ctx, msg)
 	if err == nil {
 		return nil
 	}
-
-	attempts := getAttempts(msg.Headers) + 1
-	msg.Headers = setAttempts(msg.Headers, attempts)
+	attempts++
 
 	switch {
+	case rule.Ordered && attempts < rule.Attempts:
+		goto EXEC
 	case attempts >= rule.Attempts && rule.DLQ == "":
 		return err
 	case attempts >= rule.Attempts && rule.DLQ != "":
 		msg.Topic = rule.DLQ
-		msg.Headers = setAttempts(msg.Headers, 0)
+		attempts = 0 // Attempt depends on the topic where it set.
 	}
 
+	msg.Headers = setAttempts(msg.Headers, attempts)
 	if err := i.writer.WriteMessages(ctx, msg); err != nil {
 		return fmt.Errorf("failed to write message: %w", err)
 	}
