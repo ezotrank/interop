@@ -34,7 +34,7 @@ func TestInterop_Start(t *testing.T) {
 			name: "success flow",
 			flow: Flow{
 				Rules: map[string]Rule{
-					"topic1": {
+					"topic": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
 							hexec++
 							return nil
@@ -48,7 +48,9 @@ func TestInterop_Start(t *testing.T) {
 					f.reader.EXPECT().
 						FetchMessage(gomock.Any()).
 						Return(kafka.Message{
-							Topic: "topic1",
+							Topic: "topic",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 						}, nil),
 					f.reader.EXPECT().
 						FetchMessage(gomock.Any()).
@@ -58,7 +60,9 @@ func TestInterop_Start(t *testing.T) {
 				)
 				f.reader.EXPECT().
 					CommitMessages(gomock.Any(), kafka.Message{
-						Topic:   "topic1",
+						Topic:   "topic",
+						Key:     []byte("key"),
+						Value:   []byte("value"),
 						Headers: nil,
 					}).
 					Return(nil).
@@ -71,7 +75,7 @@ func TestInterop_Start(t *testing.T) {
 			name: "attempts number is zero",
 			flow: Flow{
 				Rules: map[string]Rule{
-					"topic1": {
+					"topic": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
 							return nil
 						},
@@ -84,7 +88,9 @@ func TestInterop_Start(t *testing.T) {
 					f.reader.EXPECT().
 						FetchMessage(gomock.Any()).
 						Return(kafka.Message{
-							Topic: "topic1",
+							Topic: "topic",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 						}, nil),
 				)
 			},
@@ -95,7 +101,7 @@ func TestInterop_Start(t *testing.T) {
 			name: "fetch message error",
 			flow: Flow{
 				Rules: map[string]Rule{
-					"topic1": {
+					"topic": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
 							hexec++
 							return nil
@@ -107,7 +113,9 @@ func TestInterop_Start(t *testing.T) {
 				f.reader.EXPECT().
 					FetchMessage(gomock.Any()).
 					Return(kafka.Message{
-						Topic: "topic1",
+						Topic: "topic",
+						Key:   []byte("key"),
+						Value: []byte("value"),
 					}, fmt.Errorf("error"))
 			},
 			wantexec: 0,
@@ -117,7 +125,7 @@ func TestInterop_Start(t *testing.T) {
 			name: "message with unknown topic",
 			flow: Flow{
 				Rules: map[string]Rule{
-					"topic1": {
+					"topic": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
 							hexec++
 							return nil
@@ -130,6 +138,8 @@ func TestInterop_Start(t *testing.T) {
 					FetchMessage(gomock.Any()).
 					Return(kafka.Message{
 						Topic: "topic2",
+						Key:   []byte("key"),
+						Value: []byte("value"),
 					}, nil)
 			},
 			wantexec: 0,
@@ -139,7 +149,7 @@ func TestInterop_Start(t *testing.T) {
 			name: "handle return error without retry policy",
 			flow: Flow{
 				Rules: map[string]Rule{
-					"topic1": {
+					"topic": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
 							hexec++
 							return fmt.Errorf("error")
@@ -152,7 +162,9 @@ func TestInterop_Start(t *testing.T) {
 				f.reader.EXPECT().
 					FetchMessage(gomock.Any()).
 					Return(kafka.Message{
-						Topic: "topic1",
+						Topic: "topic",
+						Key:   []byte("key"),
+						Value: []byte("value"),
 					}, nil)
 			},
 			wantexec: 1,
@@ -162,7 +174,7 @@ func TestInterop_Start(t *testing.T) {
 			name: "commit message return error",
 			flow: Flow{
 				Rules: map[string]Rule{
-					"topic1": {
+					"topic": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
 							hexec++
 							return nil
@@ -175,11 +187,15 @@ func TestInterop_Start(t *testing.T) {
 				f.reader.EXPECT().
 					FetchMessage(gomock.Any()).
 					Return(kafka.Message{
-						Topic: "topic1",
+						Topic: "topic",
+						Key:   []byte("key"),
+						Value: []byte("value"),
 					}, nil)
 				f.reader.EXPECT().
 					CommitMessages(gomock.Any(), kafka.Message{
-						Topic:   "topic1",
+						Topic:   "topic",
+						Key:     []byte("key"),
+						Value:   []byte("value"),
 						Headers: nil,
 					}).
 					Return(fmt.Errorf("error"))
@@ -191,7 +207,7 @@ func TestInterop_Start(t *testing.T) {
 			name: "handle return error with retry policy",
 			flow: Flow{
 				Rules: map[string]Rule{
-					"topic1": {
+					"topic": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
 							hexec++
 							return fmt.Errorf("error")
@@ -205,12 +221,16 @@ func TestInterop_Start(t *testing.T) {
 					f.reader.EXPECT().
 						FetchMessage(gomock.Any()).
 						Return(kafka.Message{
-							Topic: "topic1",
+							Topic: "topic",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 						}, nil),
 					f.reader.EXPECT().
 						FetchMessage(gomock.Any()).
 						Return(kafka.Message{
-							Topic: "topic1",
+							Topic: "topic",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 							Headers: []kafka.Header{
 								{Key: AttemptsHeader, Value: []byte("1")},
 							},
@@ -218,7 +238,9 @@ func TestInterop_Start(t *testing.T) {
 					f.reader.EXPECT().
 						FetchMessage(gomock.Any()).
 						Return(kafka.Message{
-							Topic: "topic1",
+							Topic: "topic",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 							Headers: []kafka.Header{
 								{Key: AttemptsHeader, Value: []byte("2")},
 							},
@@ -227,7 +249,9 @@ func TestInterop_Start(t *testing.T) {
 				gomock.InOrder(
 					f.writer.EXPECT().
 						WriteMessages(gomock.Any(), kafka.Message{
-							Topic: "topic1",
+							Topic: "topic",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 							Headers: []kafka.Header{
 								{Key: AttemptsHeader, Value: []byte("1")},
 							},
@@ -235,7 +259,9 @@ func TestInterop_Start(t *testing.T) {
 						Return(nil),
 					f.writer.EXPECT().
 						WriteMessages(gomock.Any(), kafka.Message{
-							Topic: "topic1",
+							Topic: "topic",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 							Headers: []kafka.Header{
 								{Key: AttemptsHeader, Value: []byte("2")},
 							},
@@ -245,13 +271,17 @@ func TestInterop_Start(t *testing.T) {
 				gomock.InOrder(
 					f.reader.EXPECT().
 						CommitMessages(gomock.Any(), kafka.Message{
-							Topic:   "topic1",
+							Topic:   "topic",
+							Key:     []byte("key"),
+							Value:   []byte("value"),
 							Headers: nil,
 						}).
 						Return(nil),
 					f.reader.EXPECT().
 						CommitMessages(gomock.Any(), kafka.Message{
-							Topic: "topic1",
+							Topic: "topic",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 							Headers: []kafka.Header{
 								{Key: AttemptsHeader, Value: []byte("1")},
 							},
@@ -266,7 +296,7 @@ func TestInterop_Start(t *testing.T) {
 			name: "handle return error with retry policy and DLQ",
 			flow: Flow{
 				Rules: map[string]Rule{
-					"topic1": {
+					"topic": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
 							hexec++
 							return fmt.Errorf("error")
@@ -281,7 +311,9 @@ func TestInterop_Start(t *testing.T) {
 					f.reader.EXPECT().
 						FetchMessage(gomock.Any()).
 						Return(kafka.Message{
-							Topic: "topic1",
+							Topic: "topic",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 						}, nil),
 					f.reader.EXPECT().
 						FetchMessage(gomock.Any()).
@@ -292,6 +324,8 @@ func TestInterop_Start(t *testing.T) {
 				f.writer.EXPECT().
 					WriteMessages(gomock.Any(), kafka.Message{
 						Topic: "dlq",
+						Key:   []byte("key"),
+						Value: []byte("value"),
 						Headers: []kafka.Header{
 							{Key: AttemptsHeader, Value: []byte("0")},
 						},
@@ -299,7 +333,9 @@ func TestInterop_Start(t *testing.T) {
 					Return(nil)
 				f.reader.EXPECT().
 					CommitMessages(gomock.Any(), kafka.Message{
-						Topic:   "topic1",
+						Topic:   "topic",
+						Key:     []byte("key"),
+						Value:   []byte("value"),
 						Headers: nil,
 					}).
 					Return(nil)
@@ -311,7 +347,7 @@ func TestInterop_Start(t *testing.T) {
 			name: "handle return error only first retry policy is set",
 			flow: Flow{
 				Rules: map[string]Rule{
-					"topic1": {
+					"topic": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
 							hexec++
 							if hexec == 2 {
@@ -328,12 +364,16 @@ func TestInterop_Start(t *testing.T) {
 					f.reader.EXPECT().
 						FetchMessage(gomock.Any()).
 						Return(kafka.Message{
-							Topic: "topic1",
+							Topic: "topic",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 						}, nil),
 					f.reader.EXPECT().
 						FetchMessage(gomock.Any()).
 						Return(kafka.Message{
-							Topic: "topic1",
+							Topic: "topic",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 							Headers: []kafka.Header{
 								{Key: AttemptsHeader, Value: []byte("1")},
 							},
@@ -346,7 +386,9 @@ func TestInterop_Start(t *testing.T) {
 				)
 				f.writer.EXPECT().
 					WriteMessages(gomock.Any(), kafka.Message{
-						Topic: "topic1",
+						Topic: "topic",
+						Key:   []byte("key"),
+						Value: []byte("value"),
 						Headers: []kafka.Header{
 							{Key: AttemptsHeader, Value: []byte("1")},
 						},
@@ -355,13 +397,17 @@ func TestInterop_Start(t *testing.T) {
 				gomock.InOrder(
 					f.reader.EXPECT().
 						CommitMessages(gomock.Any(), kafka.Message{
-							Topic:   "topic1",
+							Topic:   "topic",
+							Key:     []byte("key"),
+							Value:   []byte("value"),
 							Headers: nil,
 						}).
 						Return(nil),
 					f.reader.EXPECT().
 						CommitMessages(gomock.Any(), kafka.Message{
-							Topic: "topic1",
+							Topic: "topic",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 							Headers: []kafka.Header{
 								{Key: AttemptsHeader, Value: []byte("1")},
 							},
@@ -376,7 +422,7 @@ func TestInterop_Start(t *testing.T) {
 			name: "handle return error dlq is set with retries",
 			flow: Flow{
 				Rules: map[string]Rule{
-					"topic1": {
+					"topic": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
 							hexec++
 							return fmt.Errorf("error")
@@ -399,12 +445,16 @@ func TestInterop_Start(t *testing.T) {
 					f.reader.EXPECT().
 						FetchMessage(gomock.Any()).
 						Return(kafka.Message{
-							Topic: "topic1",
+							Topic: "topic",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 						}, nil),
 					f.reader.EXPECT().
 						FetchMessage(gomock.Any()).
 						Return(kafka.Message{
 							Topic: "retry",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 							Headers: []kafka.Header{
 								{Key: AttemptsHeader, Value: []byte("0")},
 							},
@@ -413,6 +463,8 @@ func TestInterop_Start(t *testing.T) {
 						FetchMessage(gomock.Any()).
 						Return(kafka.Message{
 							Topic: "retry",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 							Headers: []kafka.Header{
 								{Key: AttemptsHeader, Value: []byte("1")},
 							},
@@ -421,6 +473,8 @@ func TestInterop_Start(t *testing.T) {
 						FetchMessage(gomock.Any()).
 						Return(kafka.Message{
 							Topic: "retry",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 							Headers: []kafka.Header{
 								{Key: AttemptsHeader, Value: []byte("2")},
 							},
@@ -435,6 +489,8 @@ func TestInterop_Start(t *testing.T) {
 					f.writer.EXPECT().
 						WriteMessages(gomock.Any(), kafka.Message{
 							Topic: "retry",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 							Headers: []kafka.Header{
 								{Key: AttemptsHeader, Value: []byte("0")},
 							},
@@ -443,6 +499,8 @@ func TestInterop_Start(t *testing.T) {
 					f.writer.EXPECT().
 						WriteMessages(gomock.Any(), kafka.Message{
 							Topic: "retry",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 							Headers: []kafka.Header{
 								{Key: AttemptsHeader, Value: []byte("1")},
 							},
@@ -451,6 +509,8 @@ func TestInterop_Start(t *testing.T) {
 					f.writer.EXPECT().
 						WriteMessages(gomock.Any(), kafka.Message{
 							Topic: "retry",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 							Headers: []kafka.Header{
 								{Key: AttemptsHeader, Value: []byte("2")},
 							},
@@ -459,6 +519,8 @@ func TestInterop_Start(t *testing.T) {
 					f.writer.EXPECT().
 						WriteMessages(gomock.Any(), kafka.Message{
 							Topic: "dlq",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 							Headers: []kafka.Header{
 								{Key: AttemptsHeader, Value: []byte("0")},
 							},
@@ -468,13 +530,17 @@ func TestInterop_Start(t *testing.T) {
 				gomock.InOrder(
 					f.reader.EXPECT().
 						CommitMessages(gomock.Any(), kafka.Message{
-							Topic:   "topic1",
+							Topic:   "topic",
+							Key:     []byte("key"),
+							Value:   []byte("value"),
 							Headers: nil,
 						}).
 						Return(nil),
 					f.reader.EXPECT().
 						CommitMessages(gomock.Any(), kafka.Message{
 							Topic: "retry",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 							Headers: []kafka.Header{
 								{Key: AttemptsHeader, Value: []byte("0")},
 							},
@@ -483,6 +549,8 @@ func TestInterop_Start(t *testing.T) {
 					f.reader.EXPECT().
 						CommitMessages(gomock.Any(), kafka.Message{
 							Topic: "retry",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 							Headers: []kafka.Header{
 								{Key: AttemptsHeader, Value: []byte("1")},
 							},
@@ -491,6 +559,8 @@ func TestInterop_Start(t *testing.T) {
 					f.reader.EXPECT().
 						CommitMessages(gomock.Any(), kafka.Message{
 							Topic: "retry",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 							Headers: []kafka.Header{
 								{Key: AttemptsHeader, Value: []byte("2")},
 							},
@@ -505,7 +575,7 @@ func TestInterop_Start(t *testing.T) {
 			name: "ordered flow with retry and failed handler",
 			flow: Flow{
 				Rules: map[string]Rule{
-					"topic1": {
+					"topic": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
 							hexec++
 							return fmt.Errorf("error")
@@ -520,7 +590,9 @@ func TestInterop_Start(t *testing.T) {
 					f.reader.EXPECT().
 						FetchMessage(gomock.Any()).
 						Return(kafka.Message{
-							Topic: "topic1",
+							Topic: "topic",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 						}, nil),
 				)
 			},
@@ -531,7 +603,7 @@ func TestInterop_Start(t *testing.T) {
 			name: "ordered flow with a retry and handler with success in second time",
 			flow: Flow{
 				Rules: map[string]Rule{
-					"topic1": {
+					"topic": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
 							hexec++
 							if hexec == 2 {
@@ -549,7 +621,9 @@ func TestInterop_Start(t *testing.T) {
 					f.reader.EXPECT().
 						FetchMessage(gomock.Any()).
 						Return(kafka.Message{
-							Topic: "topic1",
+							Topic: "topic",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 						}, nil),
 					f.reader.EXPECT().
 						FetchMessage(gomock.Any()).
@@ -560,7 +634,9 @@ func TestInterop_Start(t *testing.T) {
 				gomock.InOrder(
 					f.reader.EXPECT().
 						CommitMessages(gomock.Any(), kafka.Message{
-							Topic:   "topic1",
+							Topic:   "topic",
+							Key:     []byte("key"),
+							Value:   []byte("value"),
 							Headers: nil,
 						}).
 						Return(nil),
@@ -573,7 +649,7 @@ func TestInterop_Start(t *testing.T) {
 			name: "ordered flow with retry and sending to DQL",
 			flow: Flow{
 				Rules: map[string]Rule{
-					"topic1": {
+					"topic": {
 						Handler: func(ctx context.Context, msg kafka.Message) error {
 							hexec++
 							return fmt.Errorf("error")
@@ -589,7 +665,9 @@ func TestInterop_Start(t *testing.T) {
 					f.reader.EXPECT().
 						FetchMessage(gomock.Any()).
 						Return(kafka.Message{
-							Topic: "topic1",
+							Topic: "topic",
+							Key:   []byte("key"),
+							Value: []byte("value"),
 						}, nil),
 					f.reader.EXPECT().
 						FetchMessage(gomock.Any()).
@@ -600,6 +678,8 @@ func TestInterop_Start(t *testing.T) {
 				f.writer.EXPECT().
 					WriteMessages(gomock.Any(), kafka.Message{
 						Topic: "dlq",
+						Key:   []byte("key"),
+						Value: []byte("value"),
 						Headers: []kafka.Header{
 							{Key: AttemptsHeader, Value: []byte("0")},
 						},
@@ -608,7 +688,9 @@ func TestInterop_Start(t *testing.T) {
 				gomock.InOrder(
 					f.reader.EXPECT().
 						CommitMessages(gomock.Any(), kafka.Message{
-							Topic:   "topic1",
+							Topic:   "topic",
+							Key:     []byte("key"),
+							Value:   []byte("value"),
 							Headers: nil,
 						}).
 						Return(nil),
