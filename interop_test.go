@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/segmentio/kafka-go"
@@ -14,6 +15,45 @@ import (
 
 	"github.com/ezotrank/interop/mocks"
 )
+
+func TestInterop_Start_RuleWithDelay(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	reader := mocks.NewMockireader(ctrl)
+	reader.EXPECT().
+		FetchMessage(gomock.Any()).
+		Return(kafka.Message{
+			Topic: "topic",
+			Key:   []byte("key"),
+			Value: []byte("value"),
+		}, nil)
+	reader.EXPECT().Close().Return(nil)
+
+	writer := mocks.NewMockiwriter(ctrl)
+	writer.EXPECT().Close().Return(nil)
+
+	inrp := &Interop{
+		flow: Flow{
+			Rules: map[string]Rule{
+				"topic": {
+					Handler: func(ctx context.Context, msg kafka.Message) error {
+						return fmt.Errorf("error")
+					},
+					Attempts:   3,
+					Ordered:    true,
+					RetryDelay: 100 * time.Millisecond,
+				},
+			},
+		},
+		reader: reader,
+		writer: writer,
+	}
+
+	ts := time.Now()
+	require.Error(t, inrp.Start(context.Background()))
+	// time of execution should be more that two times by 100ms.
+	require.True(t, time.Since(ts) >= 200*time.Millisecond)
+}
 
 //nolint:funlen
 func TestInterop_Start(t *testing.T) {

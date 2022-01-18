@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"strconv"
+	"time"
 
 	"github.com/segmentio/kafka-go"
 	"golang.org/x/sync/errgroup"
@@ -68,6 +69,7 @@ EXEC:
 
 	switch {
 	case rule.Ordered && attempts < rule.Attempts:
+		time.Sleep(rule.RetryDelay)
 		goto EXEC
 	case attempts >= rule.Attempts && rule.DLQ == "":
 		return err

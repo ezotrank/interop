@@ -2,6 +2,7 @@ package interop
 
 import (
 	"context"
+	"time"
 
 	"github.com/segmentio/kafka-go"
 )
@@ -16,6 +17,8 @@ type Rule struct {
 	// Ordered is a flag indicating whether messages should be retried in
 	// the same function without resend to same topic.
 	Ordered bool
+	// RetryDelay is a delay between attempts at ordered rule.
+	RetryDelay time.Duration
 }
 
 type Flow struct {
@@ -29,4 +32,12 @@ func (f *Flow) listenTopics() []string {
 	}
 
 	return topics
+}
+
+func DefaultBackoff(d time.Duration) func() {
+	println("sleep", d.Seconds())
+	time.Sleep(d)
+	return func() {
+		DefaultBackoff(d * 2)
+	}
 }
