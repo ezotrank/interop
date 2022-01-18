@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"testing"
@@ -90,10 +91,16 @@ func ZooKeeperStart(pool *dockertest.Pool) *dockertest.Resource {
 		Hostname:   "zookeeper",
 	})
 	if err != nil {
-		log.Fatalf("failed start redis: %s", err)
+		log.Fatalf("failed start zookeeper: %s", err)
 	}
 
-	conn, _, err := zk.Connect([]string{fmt.Sprintf("127.0.0.1:%s", res.GetPort("2181/tcp"))}, 10*time.Second)
+	dlogger := log.New(ioutil.Discard, "", 0)
+	conn, _, err := zk.Connect(
+		[]string{fmt.Sprintf("127.0.0.1:%s", res.GetPort("2181/tcp"))},
+		10*time.Second,
+		zk.WithLogInfo(false),
+		zk.WithLogger(dlogger),
+	)
 	if err != nil {
 		log.Fatalf("could not connect zookeeper: %s", err)
 	}
