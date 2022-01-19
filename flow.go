@@ -33,11 +33,3 @@ func (f *Flow) listenTopics() []string {
 
 	return topics
 }
-
-func DefaultBackoff(d time.Duration) func() {
-	println("sleep", d.Seconds())
-	time.Sleep(d)
-	return func() {
-		DefaultBackoff(d * 2)
-	}
-}
