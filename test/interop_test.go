@@ -22,7 +22,7 @@ func TestInterop(t *testing.T) {
 		topicr      string
 		topicd      string
 		cg          string
-		flow        interop.Flow
+		rules       []interop.Rule
 		handlerRecv chan kafka.Message
 	}
 	tests := []struct {
@@ -49,31 +49,32 @@ func TestInterop(t *testing.T) {
 				require.NoError(t, KafkaCreateTopic([]string{broker}, f.topic, f.topicr, f.topicd))
 
 				f.handlerRecv = make(chan kafka.Message)
-				f.flow = interop.Flow{
-					Rules: map[string]interop.Rule{
-						f.topic: {
-							Handler: func(ctx context.Context, msg kafka.Message) error {
-								f.handlerRecv <- msg
-								return fmt.Errorf("error")
-							},
-							Attempts: 1,
-							DLQ:      f.topicr,
+				f.rules = []interop.Rule{
+					{
+						Topic: f.topic,
+						Handler: func(ctx context.Context, msg kafka.Message) error {
+							f.handlerRecv <- msg
+							return fmt.Errorf("error")
 						},
-						f.topicr: {
-							Handler: func(ctx context.Context, msg kafka.Message) error {
-								f.handlerRecv <- msg
-								return fmt.Errorf("error")
-							},
-							Attempts: 2,
-							DLQ:      f.topicd,
+						Attempts: 1,
+						DLQ:      f.topicr,
+					},
+					{
+						Topic: f.topicr,
+						Handler: func(ctx context.Context, msg kafka.Message) error {
+							f.handlerRecv <- msg
+							return fmt.Errorf("error")
 						},
-						f.topicd: {
-							Handler: func(ctx context.Context, msg kafka.Message) error {
-								f.handlerRecv <- msg
-								return nil
-							},
-							Attempts: 1,
+						Attempts: 2,
+						DLQ:      f.topicd,
+					},
+					{
+						Topic: f.topicd,
+						Handler: func(ctx context.Context, msg kafka.Message) error {
+							f.handlerRecv <- msg
+							return nil
 						},
+						Attempts: 1,
 					},
 				}
 			},
@@ -133,15 +134,14 @@ func TestInterop(t *testing.T) {
 				require.NoError(t, KafkaCreateTopic([]string{broker}, f.topic, f.topicr, f.topicd))
 
 				f.handlerRecv = make(chan kafka.Message)
-				f.flow = interop.Flow{
-					Rules: map[string]interop.Rule{
-						f.topic: {
-							Handler: func(ctx context.Context, msg kafka.Message) error {
-								f.handlerRecv <- msg
-								return fmt.Errorf("error")
-							},
-							Attempts: 1,
+				f.rules = []interop.Rule{
+					{
+						Topic: f.topic,
+						Handler: func(ctx context.Context, msg kafka.Message) error {
+							f.handlerRecv <- msg
+							return fmt.Errorf("error")
 						},
+						Attempts: 1,
 					},
 				}
 			},
@@ -175,17 +175,16 @@ func TestInterop(t *testing.T) {
 				require.NoError(t, KafkaCreateTopic([]string{broker}, f.topic, f.topicr, f.topicd))
 
 				f.handlerRecv = make(chan kafka.Message)
-				f.flow = interop.Flow{
-					Rules: map[string]interop.Rule{
-						f.topic: {
-							Handler: func(ctx context.Context, msg kafka.Message) error {
-								f.handlerRecv <- msg
-								return fmt.Errorf("error")
-							},
-							Attempts: 2,
-							Ordered:  true,
-							DLQ:      f.topicd,
+				f.rules = []interop.Rule{
+					{
+						Topic: f.topic,
+						Handler: func(ctx context.Context, msg kafka.Message) error {
+							f.handlerRecv <- msg
+							return fmt.Errorf("error")
 						},
+						Attempts: 2,
+						Ordered:  true,
+						DLQ:      f.topicd,
 					},
 				}
 			},
@@ -228,11 +227,13 @@ func TestInterop(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
-			intr, err := interop.NewInterop([]string{broker}, f.flow, f.cg)
+			intr, err := interop.NewInterop([]string{broker}, f.cg, f.rules...)
 			require.NoError(t, err)
 			done := make(chan struct{})
 			go func() {
-				require.Equal(t, tt.wantErr, intr.Start(ctx) != nil)
+				err := intr.Start(ctx)
+				fmt.Printf("%+v\n", err)
+				require.Equal(t, tt.wantErr, err != nil)
 				done <- struct{}{}
 			}()
 

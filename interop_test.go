@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"reflect"
 	"testing"
 	"time"
 
@@ -33,16 +34,15 @@ func TestInterop_Start_RuleWithDelay(t *testing.T) {
 	writer.EXPECT().Close().Return(nil)
 
 	inrp := &Interop{
-		flow: Flow{
-			Rules: map[string]Rule{
-				"topic": {
-					Handler: func(ctx context.Context, msg kafka.Message) error {
-						return fmt.Errorf("error")
-					},
-					Attempts:   3,
-					Ordered:    true,
-					RetryDelay: 100 * time.Millisecond,
+		rules: []Rule{
+			{
+				Topic: "topic",
+				Handler: func(ctx context.Context, msg kafka.Message) error {
+					return fmt.Errorf("error")
 				},
+				Attempts:   3,
+				Ordered:    true,
+				RetryDelay: 100 * time.Millisecond,
 			},
 		},
 		reader: reader,
@@ -58,29 +58,28 @@ func TestInterop_Start_RuleWithDelay(t *testing.T) {
 //nolint:funlen
 func TestInterop_Start(t *testing.T) {
 	type fields struct {
-		flow   Flow
+		rules  []Rule
 		reader *mocks.Mockireader
 		writer *mocks.Mockiwriter
 	}
 	var hexec int // number of handler executions
 	tests := []struct {
 		name     string
-		flow     Flow
+		rules    []Rule
 		prepare  func(f *fields)
 		wantexec int
 		wantErr  bool
 	}{
 		{
 			name: "success flow",
-			flow: Flow{
-				Rules: map[string]Rule{
-					"topic": {
-						Handler: func(ctx context.Context, msg kafka.Message) error {
-							hexec++
-							return nil
-						},
-						Attempts: 1,
+			rules: []Rule{
+				{
+					Topic: "topic",
+					Handler: func(ctx context.Context, msg kafka.Message) error {
+						hexec++
+						return nil
 					},
+					Attempts: 1,
 				},
 			},
 			prepare: func(f *fields) {
@@ -113,14 +112,13 @@ func TestInterop_Start(t *testing.T) {
 		},
 		{
 			name: "attempts number is zero",
-			flow: Flow{
-				Rules: map[string]Rule{
-					"topic": {
-						Handler: func(ctx context.Context, msg kafka.Message) error {
-							return nil
-						},
-						Attempts: 0,
+			rules: []Rule{
+				{
+					Topic: "topic",
+					Handler: func(ctx context.Context, msg kafka.Message) error {
+						return nil
 					},
+					Attempts: 0,
 				},
 			},
 			prepare: func(f *fields) {
@@ -139,13 +137,12 @@ func TestInterop_Start(t *testing.T) {
 		},
 		{
 			name: "fetch message error",
-			flow: Flow{
-				Rules: map[string]Rule{
-					"topic": {
-						Handler: func(ctx context.Context, msg kafka.Message) error {
-							hexec++
-							return nil
-						},
+			rules: []Rule{
+				{
+					Topic: "topic",
+					Handler: func(ctx context.Context, msg kafka.Message) error {
+						hexec++
+						return nil
 					},
 				},
 			},
@@ -163,13 +160,12 @@ func TestInterop_Start(t *testing.T) {
 		},
 		{
 			name: "message with unknown topic",
-			flow: Flow{
-				Rules: map[string]Rule{
-					"topic": {
-						Handler: func(ctx context.Context, msg kafka.Message) error {
-							hexec++
-							return nil
-						},
+			rules: []Rule{
+				{
+					Topic: "topic",
+					Handler: func(ctx context.Context, msg kafka.Message) error {
+						hexec++
+						return nil
 					},
 				},
 			},
@@ -187,15 +183,14 @@ func TestInterop_Start(t *testing.T) {
 		},
 		{
 			name: "handle return error without retry policy",
-			flow: Flow{
-				Rules: map[string]Rule{
-					"topic": {
-						Handler: func(ctx context.Context, msg kafka.Message) error {
-							hexec++
-							return fmt.Errorf("error")
-						},
-						Attempts: 1,
+			rules: []Rule{
+				{
+					Topic: "topic",
+					Handler: func(ctx context.Context, msg kafka.Message) error {
+						hexec++
+						return fmt.Errorf("error")
 					},
+					Attempts: 1,
 				},
 			},
 			prepare: func(f *fields) {
@@ -212,15 +207,14 @@ func TestInterop_Start(t *testing.T) {
 		},
 		{
 			name: "commit message return error",
-			flow: Flow{
-				Rules: map[string]Rule{
-					"topic": {
-						Handler: func(ctx context.Context, msg kafka.Message) error {
-							hexec++
-							return nil
-						},
-						Attempts: 1,
+			rules: []Rule{
+				{
+					Topic: "topic",
+					Handler: func(ctx context.Context, msg kafka.Message) error {
+						hexec++
+						return nil
 					},
+					Attempts: 1,
 				},
 			},
 			prepare: func(f *fields) {
@@ -245,15 +239,14 @@ func TestInterop_Start(t *testing.T) {
 		},
 		{
 			name: "handle return error with retry policy",
-			flow: Flow{
-				Rules: map[string]Rule{
-					"topic": {
-						Handler: func(ctx context.Context, msg kafka.Message) error {
-							hexec++
-							return fmt.Errorf("error")
-						},
-						Attempts: 3,
+			rules: []Rule{
+				{
+					Topic: "topic",
+					Handler: func(ctx context.Context, msg kafka.Message) error {
+						hexec++
+						return fmt.Errorf("error")
 					},
+					Attempts: 3,
 				},
 			},
 			prepare: func(f *fields) {
@@ -334,16 +327,15 @@ func TestInterop_Start(t *testing.T) {
 		},
 		{
 			name: "handle return error with retry policy and DLQ",
-			flow: Flow{
-				Rules: map[string]Rule{
-					"topic": {
-						Handler: func(ctx context.Context, msg kafka.Message) error {
-							hexec++
-							return fmt.Errorf("error")
-						},
-						Attempts: 1,
-						DLQ:      "dlq",
+			rules: []Rule{
+				{
+					Topic: "topic",
+					Handler: func(ctx context.Context, msg kafka.Message) error {
+						hexec++
+						return fmt.Errorf("error")
 					},
+					Attempts: 1,
+					DLQ:      "dlq",
 				},
 			},
 			prepare: func(f *fields) {
@@ -383,18 +375,17 @@ func TestInterop_Start(t *testing.T) {
 		},
 		{
 			name: "handle return error only first retry policy is set",
-			flow: Flow{
-				Rules: map[string]Rule{
-					"topic": {
-						Handler: func(ctx context.Context, msg kafka.Message) error {
-							hexec++
-							if hexec == 2 {
-								return nil
-							}
-							return fmt.Errorf("error")
-						},
-						Attempts: 2,
+			rules: []Rule{
+				{
+					Topic: "topic",
+					Handler: func(ctx context.Context, msg kafka.Message) error {
+						hexec++
+						if hexec == 2 {
+							return nil
+						}
+						return fmt.Errorf("error")
 					},
+					Attempts: 2,
 				},
 			},
 			prepare: func(f *fields) {
@@ -458,24 +449,24 @@ func TestInterop_Start(t *testing.T) {
 		},
 		{
 			name: "handle return error dlq is set with retries",
-			flow: Flow{
-				Rules: map[string]Rule{
-					"topic": {
-						Handler: func(ctx context.Context, msg kafka.Message) error {
-							hexec++
-							return fmt.Errorf("error")
-						},
-						Attempts: 1,
-						DLQ:      "retry",
+			rules: []Rule{
+				{
+					Topic: "topic",
+					Handler: func(ctx context.Context, msg kafka.Message) error {
+						hexec++
+						return fmt.Errorf("error")
 					},
-					"retry": {
-						Handler: func(ctx context.Context, msg kafka.Message) error {
-							hexec++
-							return fmt.Errorf("error")
-						},
-						Attempts: 3,
-						DLQ:      "dlq",
+					Attempts: 1,
+					DLQ:      "retry",
+				},
+				{
+					Topic: "retry",
+					Handler: func(ctx context.Context, msg kafka.Message) error {
+						hexec++
+						return fmt.Errorf("error")
 					},
+					Attempts: 3,
+					DLQ:      "dlq",
 				},
 			},
 			prepare: func(f *fields) {
@@ -603,16 +594,15 @@ func TestInterop_Start(t *testing.T) {
 		},
 		{
 			name: "ordered flow with retry and failed handler",
-			flow: Flow{
-				Rules: map[string]Rule{
-					"topic": {
-						Handler: func(ctx context.Context, msg kafka.Message) error {
-							hexec++
-							return fmt.Errorf("error")
-						},
-						Attempts: 3,
-						Ordered:  true,
+			rules: []Rule{
+				{
+					Topic: "topic",
+					Handler: func(ctx context.Context, msg kafka.Message) error {
+						hexec++
+						return fmt.Errorf("error")
 					},
+					Attempts: 3,
+					Ordered:  true,
 				},
 			},
 			prepare: func(f *fields) {
@@ -631,19 +621,18 @@ func TestInterop_Start(t *testing.T) {
 		},
 		{
 			name: "ordered flow with a retry and handler with success in second time",
-			flow: Flow{
-				Rules: map[string]Rule{
-					"topic": {
-						Handler: func(ctx context.Context, msg kafka.Message) error {
-							hexec++
-							if hexec == 2 {
-								return nil
-							}
-							return fmt.Errorf("error")
-						},
-						Attempts: 2,
-						Ordered:  true,
+			rules: []Rule{
+				{
+					Topic: "topic",
+					Handler: func(ctx context.Context, msg kafka.Message) error {
+						hexec++
+						if hexec == 2 {
+							return nil
+						}
+						return fmt.Errorf("error")
 					},
+					Attempts: 2,
+					Ordered:  true,
 				},
 			},
 			prepare: func(f *fields) {
@@ -677,17 +666,16 @@ func TestInterop_Start(t *testing.T) {
 		},
 		{
 			name: "ordered flow with retry and sending to DQL",
-			flow: Flow{
-				Rules: map[string]Rule{
-					"topic": {
-						Handler: func(ctx context.Context, msg kafka.Message) error {
-							hexec++
-							return fmt.Errorf("error")
-						},
-						DLQ:      "dlq",
-						Attempts: 2,
-						Ordered:  true,
+			rules: []Rule{
+				{
+					Topic: "topic",
+					Handler: func(ctx context.Context, msg kafka.Message) error {
+						hexec++
+						return fmt.Errorf("error")
 					},
+					DLQ:      "dlq",
+					Attempts: 2,
+					Ordered:  true,
 				},
 			},
 			prepare: func(f *fields) {
@@ -734,7 +722,7 @@ func TestInterop_Start(t *testing.T) {
 			ctrl := gomock.NewController(t)
 
 			f := fields{
-				flow:   tt.flow,
+				rules:  tt.rules,
 				reader: mocks.NewMockireader(ctrl),
 				writer: mocks.NewMockiwriter(ctrl),
 			}
@@ -747,7 +735,7 @@ func TestInterop_Start(t *testing.T) {
 			f.writer.EXPECT().Close().Return(nil)
 
 			i := &Interop{
-				flow:   f.flow,
+				rules:  f.rules,
 				reader: f.reader,
 				writer: f.writer,
 			}
@@ -756,6 +744,78 @@ func TestInterop_Start(t *testing.T) {
 				t.Errorf("Start() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			require.Equal(t, tt.wantexec, hexec)
+		})
+	}
+}
+
+func Test_topics(t *testing.T) {
+	type fields struct {
+		rules []Rule
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   []string
+	}{
+		{
+			name: "return listen topics",
+			fields: fields{
+				rules: []Rule{
+					{Topic: "topic-1"},
+					{Topic: "topic-2"},
+					{Topic: "topic-3"},
+				},
+			},
+			want: []string{"topic-1", "topic-2", "topic-3"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.ElementsMatch(t, tt.want, topics(tt.fields.rules...))
+		})
+	}
+}
+
+func Test_dupls(t *testing.T) {
+	type args struct {
+		rules []Rule
+	}
+	tests := []struct {
+		name string
+		args args
+		want []string
+	}{
+		{
+			name: "return duplicates topics",
+			args: args{
+				rules: []Rule{
+					{Topic: "topic-1"},
+					{Topic: "topic-1"},
+					{Topic: "topic-2"},
+					{Topic: "topic-3"},
+				},
+			},
+			want: []string{
+				"topic-1",
+			},
+		},
+		{
+			name: "topics without duplicates",
+			args: args{
+				rules: []Rule{
+					{Topic: "topic-1"},
+					{Topic: "topic-2"},
+					{Topic: "topic-3"},
+				},
+			},
+			want: []string{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := dupls(tt.args.rules); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("dupls() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }

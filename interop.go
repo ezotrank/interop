@@ -13,19 +13,45 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func NewInterop(brokers []string, flow Flow, cg string) (*Interop, error) {
+func NewInterop(brokers []string, cg string, rules ...Rule) (*Interop, error) {
+	if druls := dupls(rules); len(druls) != 0 {
+		return nil, fmt.Errorf("duplicate rules: %v", druls)
+	}
+
 	return &Interop{
-		flow: flow,
-		cg:   cg,
+		rules: rules,
+		cg:    cg,
 		writer: &kafka.Writer{
 			Addr: kafka.TCP(brokers...),
 		},
 		reader: kafka.NewReader(kafka.ReaderConfig{
 			Brokers:     brokers,
-			GroupTopics: flow.listenTopics(),
+			GroupTopics: topics(rules...),
 			GroupID:     cg,
 		}),
 	}, nil
+}
+
+func dupls(rules []Rule) []string {
+	hm := make(map[string]int)
+	druls := make([]string, 0)
+	for _, r := range rules {
+		if val := hm[r.Topic]; val == 1 {
+			druls = append(druls, r.Topic)
+		} else {
+			hm[r.Topic]++
+		}
+	}
+	return druls
+}
+
+func topics(rules ...Rule) []string {
+	topics := make([]string, 0, len(rules))
+	for _, rule := range rules {
+		topics = append(topics, rule.Topic)
+	}
+
+	return topics
 }
 
 type ireader interface {
@@ -40,16 +66,25 @@ type iwriter interface {
 }
 
 type Interop struct {
-	flow   Flow
+	rules  []Rule
 	cg     string
 	reader ireader
 	writer iwriter
 }
 
 func (i *Interop) run(ctx context.Context, msg kafka.Message) error {
-	rule, ok := i.flow.Rules[msg.Topic]
-	if !ok {
-		return fmt.Errorf("no rule for topic: %s", msg.Topic)
+	// TODO(ezo): terrible
+	var rule Rule
+	var found bool
+	for _, rule = range i.rules {
+		if rule.Topic == msg.Topic {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("no found rule for topic: %s", msg.Topic)
 	}
 
 	// TODO(ezo): validate this in the rule builder.
