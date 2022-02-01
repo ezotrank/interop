@@ -8,6 +8,13 @@ generate-mocks: ## Generate mocks
 run-linters: ## Run linters
 	golangci-lint run
 
+run-act: ## Run act
+ifeq (, $(shell which act))
+	echo "act not found, installing dependencies"
+	brew install act
+endif
+	act
+
 fmt: ## Format code
 	goimports -w -local github.com/ezotrank/ ./.
 
